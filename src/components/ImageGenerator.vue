@@ -346,14 +346,16 @@ const generateImage = async () => {
     console.log('API响应数据:', response.data)
 
     // 检查响应数据
-    if (!response.data || !response.data.result) {
+    if (!response.data) {
       console.error('API响应格式错误:', response.data)
       throw new Error('服务器返回的数据格式不正确')
     }
-
     if (response.data.code !== 200) {
       console.error('API未返回图片URL:', response.data)
-      throw new Error('未能获取到图片URL')
+      throw new Error(response.data.message || '生成失败')
+    }
+    if (!response.data.result || !response.data.result.data || !response.data.result.data.url) {
+      throw new Error('服务器返回的数据中缺少图片URL')
     }
 
     // 检查是否有错误信息
