@@ -521,7 +521,7 @@ body {
   max-width: var(--max-content-width);
   margin: 0 auto;
   padding: 20px;
-  padding-top: 300px; /* Increased padding-top for desktop to move nav even further down */
+  padding-top: 280px; /* Reduced padding-top for desktop to bring nav up */
   flex: 1;
   display: flex;
   flex-direction: column;

@@ -241,6 +241,7 @@ const showAdditionalOptions = ref(false)
 const prompt = ref('')
 const uploadedImageUrl = ref(null)
 const uploadedImageBase64 = ref(null)
+const uploadedImageName = ref(null)
 const width = ref(1280)
 const height = ref(1280)
 const negativePrompt = ref('')
@@ -291,14 +292,37 @@ const handleToggleTheme = () => {
   emit('toggleTheme')
 }
 
-const handleImageUpload = file => {
+const handleImageUpload = async file => {
   if (file.raw.type.startsWith('image/')) {
-    const reader = new FileReader()
-    reader.onload = e => {
-      uploadedImageUrl.value = e.target.result
-      uploadedImageBase64.value = e.target.result.split(',')[1] // 提取base64数据
+    try {
+      // Create FormData for file upload
+      const formData = new FormData()
+      formData.append('file', file.raw)
+
+      // Upload to Java interface
+      const response = await axios.post('http://localhost:18009/comfyui/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+
+      if (response.data && response.data.code === 200) {
+        // 保存返回的图片文件名
+        uploadedImageName.value = response.data.result.data
+        // 更新图片预览
+        const reader = new FileReader()
+        reader.onload = e => {
+          uploadedImageUrl.value = e.target.result
+          uploadedImageBase64.value = e.target.result.split(',')[1]
+        }
+        reader.readAsDataURL(file.raw)
+      } else {
+        throw new Error(response.data?.message || '上传失败')
+      }
+    } catch (error) {
+      console.error('图片上传失败:', error)
+      emit('error', { message: error.message || '图片上传失败，请重试' })
     }
-    reader.readAsDataURL(file.raw)
   } else {
     // 处理非图片文件
     emit('error', { message: '请上传图片文件' })
@@ -308,45 +332,42 @@ const handleImageUpload = file => {
 const removeUploadedImage = () => {
   uploadedImageUrl.value = null
   uploadedImageBase64.value = null
+  uploadedImageName.value = null // 清除图片文件名
 }
 
 const generateImage = async () => {
-  if (!prompt.value.trim() || !uploadedImageBase64.value) {
+  if (!prompt.value.trim() || !uploadedImageName.value) {
     emit('error', { message: '请填写描述并上传图片' })
     return
   }
 
   loading.value = true
-  let isMounted = true // 添加组件挂载状态检查
+  let isMounted = true
 
-  // 组件卸载时的清理函数
   const cleanup = () => {
     isMounted = false
   }
 
-  // 保存清理函数供后续使用
   if (typeof cleanupFunction === 'function') {
     cleanupFunction()
   }
   cleanupFunction = cleanup
 
   try {
-    // 验证提示词长度
     if (prompt.value.length > 1000) {
       throw new Error('提示词过长，请保持在1000字符以内')
     }
 
-    // 构建请求参数
     const requestParams = {
-      workflow: 'ImageToImage.json', // 图像生成图像的工作流
-      image: uploadedImageBase64.value, // Base64编码的输入图片
+      workflow: 'ImageToImage.json',
+      imageInput: uploadedImageName.value, // 使用上传后的图片文件名
       prompt: prompt.value.trim(),
       batchSize: Math.max(1, Math.min(4, parseInt(imageCount.value))),
       image_size: `${width.value}x${height.value}`,
-      model: 'Kwai-Kolors/Kolors', // 使用相同的模型
+      model: 'Kwai-Kolors/Kolors',
       width: `${width.value}`,
       height: `${height.value}`,
-      strength: parseFloat(strength.value) // 添加重绘幅度参数
+      strength: parseFloat(strength.value)
     }
 
     // 添加可选参数
@@ -366,10 +387,10 @@ const generateImage = async () => {
 
     // 验证API密钥
     const apiKey = import.meta.env.VITE_SILICONFLOW_API_KEY
-    if (!apiKey) {
-      console.error('API密钥验证失败: API密钥未配置')
-      throw new Error('API密钥未配置，请检查环境变量VITE_SILICONFLOW_API_KEY')
-    }
+    // if (!apiKey) {
+    //   console.error('API密钥验证失败: API密钥未配置')
+    //   throw new Error('API密钥未配置，请检查环境变量VITE_SILICONFLOW_API_KEY')
+    // }
 
     // 打印参数（不包含完整图片数据以避免日志过大）
     const logParams = { ...requestParams }
