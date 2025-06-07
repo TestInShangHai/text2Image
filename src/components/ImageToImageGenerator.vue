@@ -114,7 +114,7 @@
               :key="num"
               :label="`${num}张图片`"
               :value="num" />
-          </el-select>
+            </el-select>
         </el-form-item>
       </div>
 
@@ -292,14 +292,16 @@ const handleToggleTheme = () => {
 }
 
 const handleImageUpload = file => {
-  if (file.raw) {
+  if (file.raw.type.startsWith('image/')) {
     const reader = new FileReader()
     reader.onload = e => {
       uploadedImageUrl.value = e.target.result
-      // 将图片数据转换为Base64编码，去除前缀
-      uploadedImageBase64.value = e.target.result.split(',')[1]
+      uploadedImageBase64.value = e.target.result.split(',')[1] // 提取base64数据
     }
     reader.readAsDataURL(file.raw)
+  } else {
+    // 处理非图片文件
+    emit('error', { message: '请上传图片文件' })
   }
 }
 
@@ -310,38 +312,44 @@ const removeUploadedImage = () => {
 
 const generateImage = async () => {
   if (!prompt.value.trim() || !uploadedImageBase64.value) {
-    emit('error', { message: '请上传图片并输入描述' })
+    emit('error', { message: '请填写描述并上传图片' })
     return
   }
 
   loading.value = true
-  let isMounted = true
+  let isMounted = true // 添加组件挂载状态检查
 
+  // 组件卸载时的清理函数
   const cleanup = () => {
     isMounted = false
   }
 
+  // 保存清理函数供后续使用
   if (typeof cleanupFunction === 'function') {
     cleanupFunction()
   }
   cleanupFunction = cleanup
 
   try {
+    // 验证提示词长度
     if (prompt.value.length > 1000) {
       throw new Error('提示词过长，请保持在1000字符以内')
     }
 
+    // 构建请求参数
     const requestParams = {
-      workflow: 'ImageToImage.json', // 注意：这里需要你有一个对应的 ImageToImage.json 工作流
+      workflow: 'ImageToImage.json', // 图像生成图像的工作流
+      image: uploadedImageBase64.value, // Base64编码的输入图片
       prompt: prompt.value.trim(),
-      image: uploadedImageBase64.value, // 传入Base64编码的图片数据
       batchSize: Math.max(1, Math.min(4, parseInt(imageCount.value))),
       image_size: `${width.value}x${height.value}`,
-      model: 'Kwai-Kolors/Kolors',
+      model: 'Kwai-Kolors/Kolors', // 使用相同的模型
       width: `${width.value}`,
       height: `${height.value}`,
+      strength: parseFloat(strength.value) // 添加重绘幅度参数
     }
 
+    // 添加可选参数
     if (showAdditionalOptions.value) {
       if (negativePrompt.value.trim()) {
         requestParams.negative_prompt = negativePrompt.value.trim()
@@ -354,14 +362,29 @@ const generateImage = async () => {
         1,
         Math.min(100, parseInt(steps.value))
       )
-      requestParams.strength = Math.max(
-        0.1,
-        Math.min(1, parseFloat(strength.value))
-      )
     }
 
+    // 验证API密钥
     const apiKey = import.meta.env.VITE_SILICONFLOW_API_KEY
+    if (!apiKey) {
+      console.error('API密钥验证失败: API密钥未配置')
+      throw new Error('API密钥未配置，请检查环境变量VITE_SILICONFLOW_API_KEY')
+    }
 
+    // 打印参数（不包含完整图片数据以避免日志过大）
+    const logParams = { ...requestParams }
+    if (logParams.image) {
+      logParams.image = `${logParams.image.substring(
+        0,
+        30
+      )}... [base64数据已截断]`
+    }
+    if (logParams.prompt) {
+      logParams.prompt = logParams.prompt.substring(0, 20) + '...'
+    }
+    console.log('正在请求图像生成，参数:', JSON.stringify(logParams))
+
+    // 发送请求
     const response = await axios.post(
       'http://localhost:18009/comfyui/prompt',
       requestParams,
@@ -373,35 +396,60 @@ const generateImage = async () => {
       }
     )
 
+    // 如果组件已卸载，不继续处理
     if (!isMounted) return
 
+    console.log('API响应状态:', response.status)
+    console.log('API响应数据:', response.data)
+
+    // 检查响应数据
     if (!response.data) {
+      console.error('API响应格式错误:', response.data)
       throw new Error('服务器返回的数据格式不正确')
     }
     if (response.data.code !== 200) {
+      console.error('API未返回图片URL:', response.data)
       throw new Error(response.data.message || '生成失败')
     }
     if (!response.data.result || !response.data.result.data || !response.data.result.data.url) {
       throw new Error('服务器返回的数据中缺少图片URL')
     }
 
+    // 检查是否有错误信息
     if (response.data.result.data && response.data.code === 500) {
+      console.error('服务器内部错误:', response.data.result.data.msg)
       throw new Error(response.data.result.data.msg || '服务器内部错误')
     }
 
+    // 检查图片URL数据是否存在
+    if (!response.data.result.data || !response.data.result.data.url) {
+      console.error('API响应中缺少图片URL数据:', response.data)
+      throw new Error('服务器返回的数据中缺少图片URL')
+    }
+
+    // 构建图片数据对象数组
     const imageDataArray = response.data.result.data.url.map(url => ({
       url: url,
       size: `${width.value}×${height.value}`
     }))
 
+    // 发出事件，传递图片数据
     emit('imagesGenerated', { images: imageDataArray })
 
   } catch (error) {
+    // 如果组件已卸载，不继续处理错误
     if (!isMounted) return
 
     console.error('图像生成失败:', error)
 
+    // 增强错误信息
     if (error.response) {
+      // 服务器响应了错误状态码
+      console.error('API错误响应:', {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: error.response.data,
+      })
       emit('error', {
         message: `API错误 (${error.response.status}): ${
           error.response.data?.error?.message ||
@@ -410,11 +458,15 @@ const generateImage = async () => {
         }`,
       })
     } else if (error.request) {
+      // 请求已发送但没有收到响应
+      console.error('API无响应:', error.request)
       emit('error', { message: '服务器无响应，请检查网络连接' })
     } else {
+      // 请求配置或其他错误
       emit('error', { message: error.message || '图像生成失败，请稍后重试' })
     }
   } finally {
+    // 如果组件仍然挂载，则更新状态
     if (isMounted) {
       loading.value = false
     }
@@ -435,7 +487,6 @@ watch([width, height], () => {
 </script>
 
 <style scoped>
-/* 沿用 ImageGenerator.vue 的大部分样式，并添加 ImageToImageGenerator 特有的样式 */
 .generator-header {
   display: flex;
   align-items: center;
@@ -500,6 +551,80 @@ watch([width, height], () => {
   cursor: pointer;
 }
 
+.image-uploader {
+  width: 100%;
+}
+
+:deep(.image-uploader .el-upload-dragger) {
+  width: 100%;
+  height: 200px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border-radius: 12px;
+  border: 2px dashed var(--border-color);
+  background-color: var(--card-bg);
+  transition: all 0.3s ease;
+  padding: 20px;
+  box-sizing: border-box; /* Ensure padding doesn't increase total width/height */
+}
+
+:root[data-theme='light'] :deep(.image-uploader .el-upload-dragger) {
+  background-color: rgba(255, 255, 255, 0.8);
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+:deep(.image-uploader .el-upload-dragger:hover) {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 1px var(--primary-color);
+}
+
+.uploaded-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.upload-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+
+.upload-placeholder .el-icon--upload {
+  font-size: 60px;
+  color: var(--primary-color);
+  margin-bottom: 10px;
+}
+
+.upload-placeholder .el-upload__text {
+  font-size: 14px;
+}
+
+.upload-placeholder .el-upload__text em {
+  color: var(--accent-color);
+  font-style: normal;
+  cursor: pointer;
+}
+
+.remove-image-btn {
+  margin-top: 15px;
+  width: 100%;
+  background-color: rgba(255, 0, 0, 0.2);
+  border: 1px solid rgba(255, 0, 0, 0.3);
+  color: #ff6b6b;
+  transition: all 0.3s;
+}
+
+.remove-image-btn:hover {
+  background-color: rgba(255, 0, 0, 0.3);
+  box-shadow: 0 4px 10px rgba(255, 0, 0, 0.2);
+}
+
 .form-row {
   display: flex;
   gap: 16px;
@@ -558,7 +683,7 @@ watch([width, height], () => {
 }
 
 :deep(.el-slider) {
-  --el-slider-height: 10px;
+  --el-slider-height: 10px; /* 增加高度 */
   --el-slider-button-size: 20px;
 }
 
@@ -604,6 +729,7 @@ watch([width, height], () => {
   height: var(--el-slider-button-size);
 }
 
+/* 移除不再需要的标记点样式 */
 :deep(.el-slider__stop) {
   display: none;
 }
@@ -794,52 +920,5 @@ watch([width, height], () => {
   :deep(.el-form) {
     width: 100%;
   }
-}
-
-/* ImageToImageGenerator 特有样式 */
-.image-uploader {
-  width: 100%;
-}
-
-.image-uploader :deep(.el-upload-dragger) {
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  height: 200px; /* 固定高度 */
-}
-
-.image-uploader :deep(.el-upload-dragger:hover) {
-  border-color: var(--primary-color);
-}
-
-.upload-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-secondary);
-}
-
-.upload-placeholder .el-icon--upload {
-  font-size: 60px;
-  color: var(--text-secondary);
-  margin-bottom: 10px;
-}
-
-.uploaded-image {
-  max-width: 100%;
-  max-height: 180px; /* 限制预览图高度 */
-  object-fit: contain;
-  border-radius: 8px;
-}
-
-.remove-image-btn {
-  margin-top: 10px;
-  width: 100%;
 }
 </style>

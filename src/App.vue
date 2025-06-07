@@ -235,6 +235,16 @@ const clearGeneratedImages = () => {
     <div class="app-background"></div>
     <div class="mouse-glow"></div>
 
+    <!-- Move the header here -->
+    <header class="app-header" v-if="currentPage === 'main' && isLoggedIn">
+      <div class="user-info">
+        <span class="welcome-text">欢迎, {{ userInfo?.username }}</span>
+        <el-button size="small" @click="handleLogout" class="logout-btn">
+          退出登录
+        </el-button>
+      </div>
+    </header>
+
     <div class="content-container">
       <!-- 根据当前页面显示不同内容 -->
       <template v-if="currentPage === 'login'">
@@ -242,7 +252,8 @@ const clearGeneratedImages = () => {
           :isDarkMode="isDarkMode"
           @toggleTheme="toggleTheme"
           @login="handleLogin"
-          @register="goToRegister" />
+          @register="goToRegister"
+        />
       </template>
 
       <template v-else-if="currentPage === 'register'">
@@ -250,19 +261,12 @@ const clearGeneratedImages = () => {
           :isDarkMode="isDarkMode"
           @toggleTheme="toggleTheme"
           @register-success="handleRegisterSuccess"
-          @login="goToLogin" />
+          @login="goToLogin"
+        />
       </template>
 
+      <!-- Keep the main content template, but without the header inside -->
       <template v-else-if="currentPage === 'main' && isLoggedIn">
-        <header class="app-header">
-          <div class="user-info">
-            <span class="welcome-text">欢迎, {{ userInfo?.username }}</span>
-            <el-button size="small" @click="handleLogout" class="logout-btn"
-              >退出登录</el-button
-            >
-          </div>
-        </header>
-
         <main class="app-main">
           <transition name="fade">
             <el-alert
@@ -271,7 +275,8 @@ const clearGeneratedImages = () => {
               type="error"
               show-icon
               class="error-alert"
-              @close="errorMessage = ''" />
+              @close="errorMessage = ''"
+            />
           </transition>
 
           <div class="main-layout-container">
@@ -279,18 +284,16 @@ const clearGeneratedImages = () => {
               <div class="navigation-tabs">
                 <button
                   :class="{ active: currentGenerator === 'textToImage' }"
-                  @click="currentGenerator = 'textToImage'">
+                  @click="currentGenerator = 'textToImage'"
+                >
                   文生图
                 </button>
                 <button
                   :class="{ active: currentGenerator === 'imageToImage' }"
-                  @click="currentGenerator = 'imageToImage'">
+                  @click="currentGenerator = 'imageToImage'"
+                >
                   图生图
                 </button>
-              </div>
-              <div class="placeholder-nav-items">
-                <button class="nav-placeholder-btn"></button>
-                <button class="nav-placeholder-btn"></button>
               </div>
             </div>
 
@@ -302,20 +305,23 @@ const clearGeneratedImages = () => {
                     @images-generated="handleImagesGenerated"
                     @error="handleError"
                     :isDarkMode="isDarkMode"
-                    @toggleTheme="toggleTheme" />
+                    @toggleTheme="toggleTheme"
+                  />
                   <image-to-image-generator
                     v-else-if="currentGenerator === 'imageToImage'"
                     @images-generated="handleImagesGenerated"
                     @error="handleError"
                     :isDarkMode="isDarkMode"
-                    @toggleTheme="toggleTheme" />
+                    @toggleTheme="toggleTheme"
+                  />
                 </div>
 
                 <div class="results-section">
                   <result-display
                     :images="generatedImages"
                     :imageSize="generatedImages.imageSize"
-                    @close="clearGeneratedImages" />
+                    @close="clearGeneratedImages"
+                  />
                 </div>
               </div>
             </div>
@@ -328,8 +334,7 @@ const clearGeneratedImages = () => {
               href="https://beian.miit.gov.cn/#/Integrated/recordQuery"
               target="_blank"
               class="beian-link"
-              ></a
-            >
+            ></a>
           </p>
           <!-- <p class="footer-powered">
             基于 <span class="highlight">SiliconFlow API</span> 提供技术支持
@@ -516,11 +521,12 @@ body {
   max-width: var(--max-content-width);
   margin: 0 auto;
   padding: 20px;
-  padding-top: 80px; /* Add padding for the absolute header */
+  padding-top: 300px; /* Increased padding-top for desktop to move nav even further down */
   flex: 1;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  background-color: transparent;
 }
 
 .app-container {
@@ -534,36 +540,40 @@ body {
 }
 
 .app-header {
-  position: absolute; /* Fixed position */
+  position: fixed;
   top: 0;
+  left: 0;
   right: 0;
-  width: 100%; /* Spans the full width of content-container */
-  padding: 20px; /* Matches content-container padding */
+  height: 60px; /* Standard height for the header */
+  padding: 0 20px;
   display: flex;
-  justify-content: flex-end; /* Push to right */
+  justify-content: flex-end;
   align-items: center;
-  z-index: 100;
-  background: transparent; /* Or a light transparent background */
-  box-sizing: border-box; /* Include padding in width */
+  z-index: 1000;
+  background: var(--card-bg); /* Reverted to normal background */
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .user-info {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  padding: 0; /* Remove this as app-header now has padding */
   gap: 15px;
+  background: transparent; /* Remove explicit background, border, shadow here */
+  border: none;
+  box-shadow: none;
 }
 
 .welcome-text {
-  color: var(--text-color);
+  color: var(--text-color); /* Reverted to normal color */
   font-weight: 500;
 }
 
 .logout-btn {
-  background: var(--card-bg);
+  background: var(--card-bg); /* Reverted to normal background */
   border: 1px solid var(--border-color);
-  color: var(--text-color);
+  color: var(--text-color); /* Reverted to normal color */
   transition: all 0.3s;
 }
 
@@ -581,7 +591,7 @@ body {
 
 .app-main {
   flex: 1;
-  margin-top: 0; /* No need for margin-top if content-container has padding */
+  margin-top: 0;
   margin-bottom: 80px;
   width: 100%;
   display: flex;
@@ -643,14 +653,18 @@ body {
 /* 移动端适配 */
 @media (max-width: 768px) {
   .app-header {
-    padding-top: 20px;
-    margin-bottom: 20px;
+    height: auto;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    flex-direction: column;
   }
 
   .user-info {
     flex-direction: column;
     gap: 10px;
     align-items: flex-end;
+    width: 100%;
+    justify-content: center;
   }
 
   .app-subtitle {
@@ -659,6 +673,7 @@ body {
 
   .content-container {
     padding: 15px 10px;
+    padding-top: 280px; /* Increased padding-top for mobile to move nav even further down */
   }
 
   .app-sections {
@@ -829,7 +844,7 @@ body {
 
 .navigation-tabs button.active {
   background-image: linear-gradient(to right, var(--secondary-color), var(--primary-color));
-  color: white; /* 选中状态字体颜色 */
+  color: deepskyblue; /* 选中状态字体颜色 */
   box-shadow: 0 2px 10px rgba(var(--primary-color), 0.3);
 }
 
@@ -868,94 +883,80 @@ body {
 
 /* 新增的布局样式 */
 .main-layout-container {
-  display: flex; /* Flexbox for sidebar and content */
+  display: flex;
+  flex-direction: column; /* Changed to column for top navigation */
   width: 100%;
-  gap: 30px; /* Gap between sidebar and main content */
-  align-items: flex-start; /* Align content to the top */
+  gap: 20px; /* Adjusted gap for vertical stacking */
+  align-items: center; /* Center content horizontally */
+  padding-top: 0;
+  margin-top: 0;
+  background-color: transparent;
 }
 
 .sidebar-nav {
-  flex-shrink: 0; /* Don't shrink */
-  padding-top: 20px; /* Space from top of content area */
-  width: 180px; /* Fixed width for the sidebar */
-  /* Adjust background/shadow if needed to match image */
+  flex-shrink: 0;
+  padding-top: 0;
+  width: 100%; /* Full width for top navigation */
+  display: flex; /* Make it horizontal */
+  justify-content: center; /* Center the navigation tabs */
 }
 
 .sidebar-nav .navigation-tabs {
-  flex-direction: column; /* Make buttons stack vertically */
-  align-items: flex-start; /* Align buttons to the start of the sidebar */
-  padding: 10px; /* Adjust padding for vertical layout */
-  gap: 5px; /* Smaller gap between vertical buttons */
-  width: 100%; /* Take full width of sidebar */
-  margin-bottom: 0; /* Remove existing bottom margin if it's in sidebar */
+  flex-direction: row; /* Ensure horizontal buttons */
+  align-items: center; /* Center buttons vertically within the tabs */
+  padding: 6px; /* Adjusted padding for horizontal layout */
+  gap: 8px; /* Gap between horizontal buttons */
+  margin-bottom: 24px; /* Space below the navigation tabs */
+  width: fit-content;
+  max-width: 100%;
 }
 
 .sidebar-nav .navigation-tabs button {
-  width: 100%; /* Make buttons fill the width */
-  text-align: left; /* Align text to left */
-  padding: 10px 15px; /* Adjust padding for vertical buttons */
+  width: auto; /* Buttons adjust their width */
+  text-align: center; /* Center text in buttons */
+  padding: 8px 20px;
 }
 
 .content-area {
-  flex-grow: 1; /* Take remaining space */
-  max-width: calc(100% - 180px - 30px); /* Adjust max-width based on sidebar and gap */
+  flex-grow: 1;
+  max-width: 100%; /* No longer constrained by sidebar width */
   display: flex;
-  flex-direction: column; /* Stack generator and results vertically */
-  gap: 30px; /* Gap between generator and results */
+  flex-direction: column;
+  gap: 30px;
 }
 
 .generator-section,
 .results-section {
-  width: 100%; /* Take full width of content-area */
-  max-width: none; /* Override previous max-width if any */
+  width: 100%;
+  max-width: none;
 }
 
 /* Placeholder buttons for the red boxes */
 .placeholder-nav-items {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 20px;
-  padding: 0 10px;
-}
-
-.nav-placeholder-btn {
-  background: var(--card-bg); /* Use card background */
-  border: 1px solid var(--border-color); /* Use border color */
-  border-radius: 8px;
-  height: 40px;
-  width: 100%;
-  cursor: default;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); /* Optional: subtle shadow */
-}
-
-/* Light mode adjustments for placeholder buttons */
-:root[data-theme='light'] .nav-placeholder-btn {
-  background: rgba(255, 255, 255, 0.7); /* Lighter background in light mode */
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+  display: none; /* Hide placeholder buttons if not needed */
 }
 
 /* 响应式调整 */
 @media (max-width: 1023px) {
   .main-layout-container {
-    flex-direction: column; /* Small screens: stack sidebar and content vertically */
+    flex-direction: column; /* Always column for top nav */
     gap: 20px;
+    margin-top: 0;
   }
 
   .sidebar-nav {
-    width: 100%; /* Full width for sidebar on small screens */
+    width: 100%;
     padding-top: 0;
-    display: flex; /* Make it horizontal for smaller screens */
-    justify-content: center; /* Center the navigation tabs */
+    display: flex;
+    justify-content: center;
   }
 
   .sidebar-nav .navigation-tabs {
-    flex-direction: row; /* Horizontal navigation tabs for smaller screens */
+    flex-direction: row;
     width: fit-content;
     padding: 6px;
     gap: 8px;
-    margin-bottom: 0;
+    margin-bottom: 0; /* No bottom margin here */
   }
 
   .sidebar-nav .navigation-tabs button {
@@ -969,7 +970,7 @@ body {
   }
 
   .placeholder-nav-items {
-    display: none; /* Hide placeholder buttons on small screens, or adjust their layout */
+    display: none;
   }
 }
 </style>
