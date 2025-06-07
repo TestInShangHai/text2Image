@@ -101,6 +101,41 @@
       </div>
     </glassmorphic-card>
   </div>
+  <div v-else class="results-container">
+    <glassmorphic-card variant="primary">
+      <div class="result-header">
+        <h3 class="result-title">生成结果</h3>
+      </div>
+      <div class="result-stats">
+        <div class="stat-item">
+          <div class="stat-value">-</div>
+          <div class="stat-label">图像</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">-</div>
+          <div class="stat-label">尺寸</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value time-value">-</div>
+          <div class="stat-label">生成时间</div>
+        </div>
+      </div>
+      <div class="image-grid">
+        <div class="image-container">
+          <el-image
+              src="https://placehold.co/512x512/e2e8f0/1e293b?text=等待生成图片"
+              fit="cover"
+              class="result-image"
+          >
+          </el-image>
+        </div>
+      </div>
+      <div class="tip-text">
+        <el-icon><InfoFilled /></el-icon>
+        <span>生成图片将在此处展示</span>
+      </div>
+    </glassmorphic-card>
+  </div>
 </template>
 
 <script setup>

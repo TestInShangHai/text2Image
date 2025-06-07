@@ -92,6 +92,7 @@
         </el-form-item>
       </div>
 
+      <!-- 高级选项 -->
       <div class="additional-options" v-if="showAdditionalOptions">
         <glassmorphic-card variant="dark" :withBorder="false">
           <h4 class="options-title">高级选项</h4>
@@ -173,6 +174,23 @@
         </el-button>
       </div>
     </el-form>
+
+<!--    <div v-if="requestParams || currentPromptId" class="request-info">-->
+<!--      <glassmorphic-card variant="dark" :withBorder="false">-->
+<!--        <h4 class="options-title">请求信息</h4>-->
+<!--        <div v-if="requestParams">-->
+<!--          <p><strong>提示词:</strong> {{ requestParams.prompt }}</p>-->
+<!--          <p><strong>图像尺寸:</strong> {{ requestParams.width }}×{{ requestParams.height }}</p>-->
+<!--          <p v-if="requestParams.negative_prompt"><strong>负向提示词:</strong> {{ requestParams.negative_prompt }}</p>-->
+<!--          <p v-if="requestParams.guidance_scale"><strong>风格强度:</strong> {{ requestParams.guidance_scale }}</p>-->
+<!--          <p v-if="requestParams.num_inference_steps"><strong>采样步数:</strong> {{ requestParams.num_inference_steps }}</p>-->
+<!--        </div>-->
+<!--        <div v-if="currentPromptId">-->
+<!--          <p><strong>任务ID:</strong> {{ currentPromptId }}</p>-->
+<!--        </div>-->
+<!--      </glassmorphic-card>-->
+<!--   </div>-->
+
   </glassmorphic-card>
 </template>
 
@@ -194,6 +212,9 @@ const props = defineProps({
     default: true,
   },
 })
+
+const requestParams = ref(null)
+const currentPromptId = ref(null)
 
 const loading = ref(false)
 const showAdditionalOptions = ref(false)
@@ -258,6 +279,9 @@ const generateImage = async () => {
   if (!prompt.value.trim()) {
     return
   }
+
+requestParams.value = requestParams
+currentPromptId.value = null
 
   loading.value = true
   let isMounted = true // 添加组件挂载状态检查
@@ -328,7 +352,7 @@ const generateImage = async () => {
     // 发送请求
     const response = await axios.post(
       //'https://api.siliconflow.cn/v1/images/generations',
-        'http://192.168.31.224:18009/comfyui/prompt',
+        'http://localhost:18009/comfyui/prompt',
       requestParams,
       {
         headers: {
@@ -378,6 +402,11 @@ const generateImage = async () => {
 
     // 发出事件，传递图片数据
     emit('imagesGenerated', { images: imageDataArray })
+
+    if (response.data.result && response.data.result.data && response.data.result.data.promptId) {
+      currentPromptId.value = response.data.result.data.promptId
+    }
+
   } catch (error) {
     // 如果组件已卸载，不继续处理错误
     if (!isMounted) return
@@ -941,4 +970,9 @@ watch([width, height], () => {
 .theme-icon.is-dark {
   transform: rotate(-15deg);
 }
+
+.request-info {
+  margin-top: 24px;
+}
+
 </style>

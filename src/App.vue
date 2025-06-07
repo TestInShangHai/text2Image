@@ -282,7 +282,7 @@ const clearGeneratedImages = () => {
             </div>
 
             <transition name="fade">
-              <div class="results-section" v-if="generatedImages.length">
+              <div class="results-section">
                 <result-display
                   :images="generatedImages"
                   :imageSize="generatedImages.imageSize"
