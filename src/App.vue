@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import ImageGenerator from './components/ImageGenerator.vue'
 import ResultDisplay from './components/ResultDisplay.vue'
+import ImageToImageGenerator from './components/ImageToImageGenerator.vue'
 import LoginPage from './components/LoginPage.vue'
 import RegisterPage from './components/RegisterPage.vue'
 import axios from 'axios'
@@ -12,6 +13,7 @@ const errorMessage = ref('')
 const isDarkMode = ref(true) // 默认使用深色模式
 const isLoggedIn = ref(false) // 用户登录状态
 const currentPage = ref('login') // 当前页面: login, register, main, debug
+const currentGenerator = ref('textToImage') // 新增：当前生成器模式
 const userInfo = ref(null) // 用户信息
 
 // 检测系统主题偏好
@@ -272,23 +274,51 @@ const clearGeneratedImages = () => {
               @close="errorMessage = ''" />
           </transition>
 
-          <div class="app-sections">
-            <div class="generator-section">
-              <image-generator
-                @images-generated="handleImagesGenerated"
-                @error="handleError"
-                :isDarkMode="isDarkMode"
-                @toggleTheme="toggleTheme" />
+          <div class="main-layout-container">
+            <div class="sidebar-nav">
+              <div class="navigation-tabs">
+                <button
+                  :class="{ active: currentGenerator === 'textToImage' }"
+                  @click="currentGenerator = 'textToImage'">
+                  文生图
+                </button>
+                <button
+                  :class="{ active: currentGenerator === 'imageToImage' }"
+                  @click="currentGenerator = 'imageToImage'">
+                  图生图
+                </button>
+              </div>
+              <div class="placeholder-nav-items">
+                <button class="nav-placeholder-btn"></button>
+                <button class="nav-placeholder-btn"></button>
+              </div>
             </div>
 
-            <transition name="fade">
-              <div class="results-section">
-                <result-display
-                  :images="generatedImages"
-                  :imageSize="generatedImages.imageSize"
-                  @close="clearGeneratedImages" />
+            <div class="content-area">
+              <div class="app-sections">
+                <div class="generator-section">
+                  <image-generator
+                    v-if="currentGenerator === 'textToImage'"
+                    @images-generated="handleImagesGenerated"
+                    @error="handleError"
+                    :isDarkMode="isDarkMode"
+                    @toggleTheme="toggleTheme" />
+                  <image-to-image-generator
+                    v-else-if="currentGenerator === 'imageToImage'"
+                    @images-generated="handleImagesGenerated"
+                    @error="handleError"
+                    :isDarkMode="isDarkMode"
+                    @toggleTheme="toggleTheme" />
+                </div>
+
+                <div class="results-section">
+                  <result-display
+                    :images="generatedImages"
+                    :imageSize="generatedImages.imageSize"
+                    @close="clearGeneratedImages" />
+                </div>
               </div>
-            </transition>
+            </div>
           </div>
         </main>
 
@@ -486,6 +516,7 @@ body {
   max-width: var(--max-content-width);
   margin: 0 auto;
   padding: 20px;
+  padding-top: 80px; /* Add padding for the absolute header */
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -503,23 +534,24 @@ body {
 }
 
 .app-header {
-  position: relative;
-  padding-top: 20px;
-  margin-bottom: 30px;
+  position: absolute; /* Fixed position */
+  top: 0;
+  right: 0;
+  width: 100%; /* Spans the full width of content-container */
+  padding: 20px; /* Matches content-container padding */
   display: flex;
-  flex-direction: column;
+  justify-content: flex-end; /* Push to right */
   align-items: center;
-  width: 100%;
-  max-width: var(--max-content-width);
-  z-index: 1;
+  z-index: 100;
+  background: transparent; /* Or a light transparent background */
+  box-sizing: border-box; /* Include padding in width */
 }
 
 .user-info {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  width: 100%;
-  padding: 0 10px;
+  padding: 0; /* Remove this as app-header now has padding */
   gap: 15px;
 }
 
@@ -549,13 +581,17 @@ body {
 
 .app-main {
   flex: 1;
+  margin-top: 0; /* No need for margin-top if content-container has padding */
   margin-bottom: 80px;
   width: 100%;
+  display: flex;
+  justify-content: center;
 }
 
 .app-sections {
+  /* This div now acts as a wrapper for generator and results */
   display: flex;
-  flex-direction: column;
+  flex-direction: column; /* Stack generator and results vertically */
   gap: 30px;
   width: 100%;
 }
@@ -690,13 +726,6 @@ body {
   padding: 20px;
 }
 
-.debug-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
 /* 优化卡片玻璃态效果 */
 .glassmorphic-card {
   backdrop-filter: blur(10px);
@@ -725,5 +754,222 @@ body {
   );
   z-index: -1;
   opacity: 0.5;
+}
+
+/* 添加主题切换按钮样式 */
+.theme-toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.theme-btn {
+  background: var(--card-bg);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.theme-btn:hover {
+  transform: rotate(15deg);
+  background: var(--primary-color);
+  color: white;
+}
+
+.theme-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.theme-icon.is-dark {
+  transform: rotate(-15deg);
+}
+
+.request-info {
+  margin-top: 24px;
+}
+
+/* 新增导航栏样式 */
+.navigation-tabs {
+  display: flex;
+  background: var(--card-bg);
+  border-radius: 12px; /* 较小的圆角 */
+  padding: 6px; /* 适当的内边距 */
+  gap: 8px; /* 按钮之间的间距 */
+  margin-bottom: 24px; /* 与下方内容的间距 */
+  width: fit-content; /* 宽度适应内容 */
+  max-width: 100%;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border-color);
+}
+
+.navigation-tabs button {
+  padding: 8px 20px; /* 按钮内边距 */
+  border: none;
+  background: transparent;
+  color: var(--text-secondary); /* 默认字体颜色 */
+  font-size: 1rem;
+  font-weight: 500;
+  border-radius: 8px; /* 按钮圆角 */
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap; /* 防止文字换行 */
+}
+
+.navigation-tabs button:hover:not(.active) {
+  color: var(--text-color);
+  background-color: rgba(255, 255, 255, 0.05); /* 鼠标悬停效果 */
+}
+
+.navigation-tabs button.active {
+  background-image: linear-gradient(to right, var(--secondary-color), var(--primary-color));
+  color: white; /* 选中状态字体颜色 */
+  box-shadow: 0 2px 10px rgba(var(--primary-color), 0.3);
+}
+
+/* 亮色模式下的导航栏样式 */
+:root[data-theme='light'] .navigation-tabs {
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+:root[data-theme='light'] .navigation-tabs button:hover:not(.active) {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+:root[data-theme='light'] .navigation-tabs button.active {
+  background-image: linear-gradient(to right, var(--primary-color-light), var(--secondary-color-light)); /* 亮色模式下可能需要调整渐变色 */
+  color: white;
+  box-shadow: 0 2px 10px rgba(var(--primary-color-rgb), 0.2);
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .navigation-tabs {
+    padding: 4px;
+    gap: 6px;
+    margin-bottom: 20px;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .navigation-tabs button {
+    padding: 6px 15px;
+    font-size: 0.9rem;
+  }
+}
+
+/* 新增的布局样式 */
+.main-layout-container {
+  display: flex; /* Flexbox for sidebar and content */
+  width: 100%;
+  gap: 30px; /* Gap between sidebar and main content */
+  align-items: flex-start; /* Align content to the top */
+}
+
+.sidebar-nav {
+  flex-shrink: 0; /* Don't shrink */
+  padding-top: 20px; /* Space from top of content area */
+  width: 180px; /* Fixed width for the sidebar */
+  /* Adjust background/shadow if needed to match image */
+}
+
+.sidebar-nav .navigation-tabs {
+  flex-direction: column; /* Make buttons stack vertically */
+  align-items: flex-start; /* Align buttons to the start of the sidebar */
+  padding: 10px; /* Adjust padding for vertical layout */
+  gap: 5px; /* Smaller gap between vertical buttons */
+  width: 100%; /* Take full width of sidebar */
+  margin-bottom: 0; /* Remove existing bottom margin if it's in sidebar */
+}
+
+.sidebar-nav .navigation-tabs button {
+  width: 100%; /* Make buttons fill the width */
+  text-align: left; /* Align text to left */
+  padding: 10px 15px; /* Adjust padding for vertical buttons */
+}
+
+.content-area {
+  flex-grow: 1; /* Take remaining space */
+  max-width: calc(100% - 180px - 30px); /* Adjust max-width based on sidebar and gap */
+  display: flex;
+  flex-direction: column; /* Stack generator and results vertically */
+  gap: 30px; /* Gap between generator and results */
+}
+
+.generator-section,
+.results-section {
+  width: 100%; /* Take full width of content-area */
+  max-width: none; /* Override previous max-width if any */
+}
+
+/* Placeholder buttons for the red boxes */
+.placeholder-nav-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+  padding: 0 10px;
+}
+
+.nav-placeholder-btn {
+  background: var(--card-bg); /* Use card background */
+  border: 1px solid var(--border-color); /* Use border color */
+  border-radius: 8px;
+  height: 40px;
+  width: 100%;
+  cursor: default;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); /* Optional: subtle shadow */
+}
+
+/* Light mode adjustments for placeholder buttons */
+:root[data-theme='light'] .nav-placeholder-btn {
+  background: rgba(255, 255, 255, 0.7); /* Lighter background in light mode */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+}
+
+/* 响应式调整 */
+@media (max-width: 1023px) {
+  .main-layout-container {
+    flex-direction: column; /* Small screens: stack sidebar and content vertically */
+    gap: 20px;
+  }
+
+  .sidebar-nav {
+    width: 100%; /* Full width for sidebar on small screens */
+    padding-top: 0;
+    display: flex; /* Make it horizontal for smaller screens */
+    justify-content: center; /* Center the navigation tabs */
+  }
+
+  .sidebar-nav .navigation-tabs {
+    flex-direction: row; /* Horizontal navigation tabs for smaller screens */
+    width: fit-content;
+    padding: 6px;
+    gap: 8px;
+    margin-bottom: 0;
+  }
+
+  .sidebar-nav .navigation-tabs button {
+    width: auto;
+    text-align: center;
+    padding: 8px 15px;
+  }
+
+  .content-area {
+    max-width: 100%;
+  }
+
+  .placeholder-nav-items {
+    display: none; /* Hide placeholder buttons on small screens, or adjust their layout */
+  }
 }
 </style>
