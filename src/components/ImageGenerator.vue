@@ -204,6 +204,7 @@ import {
 } from '@element-plus/icons-vue'
 import GlassmorphicCard from './GlassmorphicCard.vue'
 import axios from 'axios'
+import {API_BASE_URL} from "../utils/urlUtils.js";
 
 // 接收从父组件传来的isDarkMode和toggleTheme
 const props = defineProps({
@@ -350,10 +351,8 @@ currentPromptId.value = null
     console.log('正在请求图像生成，参数:', JSON.stringify(logParams))
 
     // 发送请求
-    const response = await axios.post(
-      //'https://api.siliconflow.cn/v1/images/generations',
-        'http://localhost:18009/comfyui/prompt',
-      requestParams,
+    const response = await axios.post(`${API_BASE_URL}/comfyui/prompt`,
+    requestParams,
       {
         headers: {
           'Content-Type': 'application/json',
@@ -379,7 +378,7 @@ currentPromptId.value = null
       throw new Error(response.data.message || '生成失败')
     }
     if (!response.data.result || !response.data.result.data || !response.data.result.data.url) {
-      throw new Error('服务器返回的数据中缺少图片URL')
+      throw new Error(response.data.msg || '服务器返回的数据中缺少图片URL')
     }
 
     // 检查是否有错误信息

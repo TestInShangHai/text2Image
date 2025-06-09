@@ -228,6 +228,7 @@ import {
 } from '@element-plus/icons-vue'
 import GlassmorphicCard from './GlassmorphicCard.vue'
 import axios from 'axios'
+import {API_BASE_URL} from "../utils/urlUtils.js";
 
 const props = defineProps({
   isDarkMode: {
@@ -300,7 +301,7 @@ const handleImageUpload = async file => {
       formData.append('file', file.raw)
 
       // Upload to Java interface
-      const response = await axios.post('http://localhost:18009/comfyui/upload', formData, {
+      const response = await axios.post(`${API_BASE_URL}/comfyui/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -405,9 +406,8 @@ const generateImage = async () => {
     }
     console.log('正在请求图像生成，参数:', JSON.stringify(logParams))
 
-    // 发送请求
-    const response = await axios.post(
-      'http://localhost:18009/comfyui/prompt',
+      // 发送请求
+    const response = await axios.post(`${API_BASE_URL}/comfyui/prompt`,
       requestParams,
       {
         headers: {
