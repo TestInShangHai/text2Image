@@ -158,7 +158,7 @@ const handleLogin = () => {
             }
 
             // 设置axios默认Authorization头
-            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
+            axios.defaults.headers.common['token'] = `Bearer ${token}`
 
             // 触发登录成功事件
             emit('login', user)

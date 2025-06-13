@@ -360,8 +360,8 @@ const generateImage = async () => {
     }
 
     const requestParams = {
-      workflow: 'ImageToImage.json',
-      imageInput: uploadedImageName.value, // 使用上传后的图片文件名
+      type: 2,
+      inputImage: uploadedImageName.value, // 使用上传后的图片文件名
       prompt: prompt.value.trim(),
       batchSize: Math.max(1, Math.min(4, parseInt(imageCount.value))),
       image_size: `${width.value}x${height.value}`,

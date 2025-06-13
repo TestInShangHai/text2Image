@@ -281,8 +281,8 @@ const generateImage = async () => {
     return
   }
 
-requestParams.value = requestParams
-currentPromptId.value = null
+  requestParams.value = requestParams
+  currentPromptId.value = null
 
   loading.value = true
   let isMounted = true // 添加组件挂载状态检查
@@ -304,9 +304,15 @@ currentPromptId.value = null
       throw new Error('提示词过长，请保持在1000字符以内')
     }
 
+    // 获取token
+    const token = localStorage.getItem('token')
+    if (!token) {
+      throw new Error('未登录，请先登录')
+    }
+
     // 构建请求参数
     const requestParams = {
-      workflow: 'TextToImage.json',
+      type: 1,
       prompt: prompt.value.trim(),
       batchSize: Math.max(1, Math.min(4, parseInt(imageCount.value))),
       image_size: `${width.value}x${height.value}`,
@@ -330,13 +336,6 @@ currentPromptId.value = null
       )
     }
 
-    // 验证API密钥
-    const apiKey = import.meta.env.VITE_SILICONFLOW_API_KEY
-    // if (!apiKey) {
-    //   console.error('API密钥验证失败: API密钥未配置')
-    //   throw new Error('API密钥未配置，请检查环境变量VITE_SILICONFLOW_API_KEY')
-    // }
-
     // 打印参数（不包含完整图片数据以避免日志过大）
     const logParams = { ...requestParams }
     if (logParams.image) {
@@ -356,7 +355,7 @@ currentPromptId.value = null
       {
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
+          'Authorization': `Bearer ${token}`,
         },
       }
     )
